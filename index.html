@@ -388,21 +388,13 @@ STRATEGY:
 - When pure logic is exhausted, guess probabilistically. Edges and corners are slightly safer as first moves.
 - Never open a flagged square.
 
-RESPONSE FORMAT — FOLLOW THIS EXACTLY:
-First, write a short reasoning paragraph (2–5 sentences).
-Then write the word ACTIONS: on its own line.
-Then list your actions, one per line, using ONLY these two formats:
-  OPEN XN
-  FLAG XN
-where X is a letter A–H and N is a digit 1–8. Example:
-  OPEN D4
-  FLAG B2
-  OPEN E5 (guess)
-
-CRITICAL: The word OPEN or FLAG must come first, followed by a space,
-followed by the column letter, followed by the row number — nothing else.
-Do not use "reveal", "uncover", asterisks, bold, or any other format.
-Your actions will be parsed by a machine. Any deviation means the move is lost.
+RESPONSE FORMAT:
+Write a short reasoning paragraph (2–5 sentences).
+Then on a new line write exactly "ACTIONS:" followed by one action per line:
+  OPEN A3
+  FLAG B5
+  OPEN C4 (guess)
+Mark probabilistic moves with "(guess)". You may issue multiple actions per turn.
 
 MEMORY INSTRUCTIONS:
 After a game ends (win or loss), write a memory entry on its own line in exactly this format:
@@ -673,8 +665,8 @@ async function aiStep() {
   let aiResponse = '';
   try {
     const response = await puter.ai.chat(
-      conversationMessages,
-      { model: 'claude-sonnet-4-5', systemPrompt: buildSystemPrompt() }
+      [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
+      { model: 'claude-sonnet-4-5' }
     );
     aiResponse = typeof response==='string' ? response
       : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
@@ -748,8 +740,8 @@ async function requestGameOverMemory(won) {
   setThinking(true);
   try {
     const response = await puter.ai.chat(
-      conversationMessages,
-      {model:'claude-sonnet-4-5', systemPrompt: buildSystemPrompt()}
+      [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
+      {model:'claude-sonnet-4-5'}
     );
     const aiResponse = typeof response==='string' ? response
       : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
