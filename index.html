@@ -717,6 +717,27 @@ function handleRightClick(r, c) {
 }
 
 // ═══════════════════════════════════════
+//  EXTRACT TEXT FROM PUTER RESPONSE
+//  Handles structural differences between
+//  Claude, GPT, Gemini, DeepSeek, etc.
+// ═══════════════════════════════════════
+function extractText(response) {
+  if (typeof response === 'string') return response;
+  // Claude via Puter: content is an array [{type:'text', text:'...'}]
+  if (Array.isArray(response?.message?.content))
+    return response.message.content.map(b => b.text || '').join('');
+  // DeepSeek / GPT / Gemini via Puter: content is a plain string
+  if (typeof response?.message?.content === 'string')
+    return response.message.content;
+  // Fallback: top-level content field
+  if (typeof response?.content === 'string') return response.content;
+  if (Array.isArray(response?.content))
+    return response.content.map(b => b.text || '').join('');
+  // Last resort: stringify so we at least see what came back
+  return JSON.stringify(response);
+}
+
+// ═══════════════════════════════════════
 //  PARSE AI RESPONSE
 // ═══════════════════════════════════════
 function parseActions(text) {
@@ -775,8 +796,7 @@ async function aiStep() {
       [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
       { model: selectedModel }
     );
-    aiResponse = typeof response==='string' ? response
-      : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
+    aiResponse = extractText(response);
   } catch(e) {
     addLog('error-msg', 'AI ERROR: ' + e.message);
     fullHistory.push({role:'ERROR', content: e.message});
@@ -850,8 +870,7 @@ async function requestGameOverMemory(won) {
       [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
       {model: selectedModel}
     );
-    const aiResponse = typeof response==='string' ? response
-      : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
+    const aiResponse = extractText(response);
     conversationMessages.push({role:'assistant', content: aiResponse});
     fullHistory.push({role:'AI → AGENT', content: aiResponse});
     addLog('incoming', extractReasoning(aiResponse), []);
