@@ -246,14 +246,75 @@
   @media(max-width:1000px){
     .main-layout { grid-template-columns: 1fr; }
   }
+
+  /* Model selector */
+  .model-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 7px 14px; border-bottom: 1px solid var(--border);
+    background: #0c1422; justify-content: center;
+  }
+  .model-bar-label {
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    color: var(--text-dim); letter-spacing: 1px; white-space: nowrap;
+  }
+  .model-cards { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .model-card {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 3px; cursor: pointer; transition: all 0.15s;
+    background: transparent; color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    white-space: nowrap;
+  }
+  .model-card:hover { border-color: var(--accent); color: var(--text); background: rgba(0,212,255,0.05); }
+  .model-card.selected { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); box-shadow: 0 0 8px rgba(0,212,255,0.15); }
+  .model-logo { font-size: 13px; }
+
+  /* Puter status indicator */
+  .puter-status {
+    display: flex; align-items: center; gap: 5px;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .puter-status.unknown .status-dot { background: #555; }
+  .puter-status.connected .status-dot { background: var(--accent3); box-shadow: 0 0 5px var(--accent3); animation: blink 2s infinite; }
+  .puter-status.error .status-dot { background: var(--mine-red); box-shadow: 0 0 5px var(--mine-red); }
+  .puter-status.unknown { color: #555; }
+  .puter-status.connected { color: var(--accent3); border-color: rgba(57,255,20,0.3); }
+  .puter-status.error { color: var(--mine-red); border-color: rgba(255,34,68,0.3); }
+
+  /* Help link */
+  .help-link {
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    color: var(--text-dim); text-decoration: none; padding: 3px 8px;
+    border: 1px solid var(--border); border-radius: 2px;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .help-link:hover { color: var(--accent); border-color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header>
   <h1>⬛ MINESWEEPER AI AGENT ⬛</h1>
-  <p>AI AGENT DEMONSTRATION &nbsp;·&nbsp; 8×8 FIELD &nbsp;·&nbsp; 10 MINES &nbsp;·&nbsp; POWERED BY PUTER.JS</p>
+  <p>AI AGENT DEMONSTRATION &nbsp;·&nbsp; 8×8 FIELD &nbsp;·&nbsp; 10 MINES &nbsp;·&nbsp; POWERED BY PUTER.JS
+    &nbsp;·&nbsp; <a href="explainer.html" target="_blank" class="help-link">? WHAT IS THIS</a>
+  </p>
 </header>
+
+<!-- MODEL SELECTOR BAR -->
+<div class="model-bar">
+  <span class="model-bar-label">AI MODEL:</span>
+  <div class="model-cards" id="model-cards"></div>
+  <div id="puter-status" class="puter-status unknown">
+    <div class="status-dot"></div>
+    <span id="puter-status-text">CHECKING…</span>
+  </div>
+</div>
 
 <div class="main-layout">
 
@@ -356,6 +417,52 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════
+//  MODELS
+// ═══════════════════════════════════════
+const MODELS = [
+  { id: 'claude-sonnet-4-5',        label: 'Claude Sonnet 4.5',  logo: '🟠', provider: 'Anthropic' },
+  { id: 'claude-haiku-4-5',         label: 'Claude Haiku 4.5',   logo: '🟡', provider: 'Anthropic' },
+  { id: 'claude-opus-4-5',          label: 'Claude Opus 4.5',    logo: '🔴', provider: 'Anthropic' },
+  { id: 'gpt-4.1-nano',             label: 'GPT-4.1 Nano',       logo: '🟢', provider: 'OpenAI' },
+  { id: 'google/gemini-2.5-flash',  label: 'Gemini 2.5 Flash',   logo: '🔵', provider: 'Google' },
+  { id: 'deepseek/deepseek-v3.2',   label: 'DeepSeek V3.2',      logo: '⚪', provider: 'DeepSeek' },
+];
+let selectedModel = MODELS[0].id;
+
+function renderModelCards() {
+  const container = document.getElementById('model-cards');
+  container.innerHTML = '';
+  MODELS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'model-card' + (m.id === selectedModel ? ' selected' : '');
+    card.title = m.provider;
+    card.innerHTML = `<span class="model-logo">${m.logo}</span>${m.label}`;
+    card.onclick = () => { selectedModel = m.id; renderModelCards(); addLog('system-msg', 'Model switched to: ' + m.label); };
+    container.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════
+//  PUTER STATUS
+// ═══════════════════════════════════════
+async function checkPuterStatus() {
+  const el = document.getElementById('puter-status');
+  const txt = document.getElementById('puter-status-text');
+  try {
+    // A minimal test call — ask puter if user is signed in
+    const signedIn = puter.auth.isSignedIn();
+    // Try a tiny real call to confirm connectivity
+    await puter.ai.chat([{role:'user', content:'hi'}], { model: 'claude-haiku-4-5' });
+    el.className = 'puter-status connected';
+    txt.textContent = 'PUTER CONNECTED';
+  } catch(e) {
+    // Auth popup may have been shown; if user cancelled it counts as not connected yet
+    el.className = 'puter-status error';
+    txt.textContent = 'NOT CONNECTED';
+  }
+}
+
 // ═══════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════
@@ -666,7 +773,7 @@ async function aiStep() {
   try {
     const response = await puter.ai.chat(
       [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
-      { model: 'claude-sonnet-4-5' }
+      { model: selectedModel }
     );
     aiResponse = typeof response==='string' ? response
       : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
@@ -741,7 +848,7 @@ async function requestGameOverMemory(won) {
   try {
     const response = await puter.ai.chat(
       [{ role: 'system', content: buildSystemPrompt() }, ...conversationMessages],
-      {model:'claude-sonnet-4-5'}
+      {model: selectedModel}
     );
     const aiResponse = typeof response==='string' ? response
       : (response?.message?.content?.[0]?.text || response?.content || JSON.stringify(response));
@@ -864,8 +971,11 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ═══════════════════════════════════════
 document.getElementById('prompt-box').value = DEFAULT_PROMPT;
 renderMemory();
+renderModelCards();
 initBoard();
 renderBoard();
+// Check Puter connection after a short delay (let puter.js load)
+setTimeout(checkPuterStatus, 1500);
 </script>
 </body>
 </html>
