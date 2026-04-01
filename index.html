@@ -314,6 +314,7 @@
     <div class="status-dot"></div>
     <span id="puter-status-text">CHECKING…</span>
   </div>
+  <button class="btn" id="puter-auth-btn" onclick="togglePuterAuth()" style="font-size:10px;padding:3px 10px;">SIGN OUT</button>
 </div>
 
 <div class="main-layout">
@@ -447,20 +448,41 @@ function renderModelCards() {
 //  PUTER STATUS
 // ═══════════════════════════════════════
 async function checkPuterStatus() {
-  const el = document.getElementById('puter-status');
+  const el  = document.getElementById('puter-status');
   const txt = document.getElementById('puter-status-text');
+  const btn = document.getElementById('puter-auth-btn');
   try {
-    // A minimal test call — ask puter if user is signed in
-    const signedIn = puter.auth.isSignedIn();
-    // Try a tiny real call to confirm connectivity
     await puter.ai.chat([{role:'user', content:'hi'}], { model: 'claude-haiku-4-5' });
     el.className = 'puter-status connected';
     txt.textContent = 'PUTER CONNECTED';
+    btn.textContent = 'SIGN OUT';
+    btn.style.borderColor = '';
+    btn.style.color = '';
   } catch(e) {
-    // Auth popup may have been shown; if user cancelled it counts as not connected yet
     el.className = 'puter-status error';
     txt.textContent = 'NOT CONNECTED';
+    btn.textContent = 'SIGN IN';
+    btn.style.borderColor = 'var(--accent3)';
+    btn.style.color = 'var(--accent3)';
   }
+}
+
+async function togglePuterAuth() {
+  const btn = document.getElementById('puter-auth-btn');
+  btn.disabled = true;
+  try {
+    if (puter.auth.isSignedIn()) {
+      await puter.auth.signOut();
+      addLog('system-msg', 'Signed out from Puter.');
+    } else {
+      await puter.auth.signIn();
+      addLog('system-msg', 'Signed in to Puter.');
+    }
+  } catch(e) {
+    addLog('system-msg', 'Auth action cancelled or failed.');
+  }
+  btn.disabled = false;
+  await checkPuterStatus();
 }
 
 // ═══════════════════════════════════════
