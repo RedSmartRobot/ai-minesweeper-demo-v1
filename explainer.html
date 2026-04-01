@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent — Explainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg:      #f7f4ef;
+    --text:    #1a1a1a;
+    --dim:     #666;
+    --accent:  #1a3a6b;
+    --accent2: #c0392b;
+    --border:  #ddd;
+    --card-bg: #fff;
+    --mono:    'Share Tech Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.75;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 28px 80px;
+  }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--dim); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 2px;
+    padding: 4px 10px; margin-bottom: 36px;
+    transition: all 0.15s;
+  }
+  .back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+  .doc-title {
+    font-size: 2.4rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--accent);
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+  .doc-subtitle {
+    font-style: italic;
+    color: var(--dim);
+    font-size: 1rem;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section {
+    margin-bottom: 44px;
+  }
+
+  .section-number {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    line-height: 1.3;
+  }
+
+  p { margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  .lead {
+    font-size: 1.12rem;
+    color: #222;
+  }
+
+  /* Key concepts table */
+  .concepts {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+  .concepts th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    padding: 6px 12px;
+    border-bottom: 2px solid var(--accent);
+    background: var(--bg);
+  }
+  .concepts td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .concepts tr:last-child td { border-bottom: none; }
+  .concepts tr:hover td { background: #f0eee8; }
+  .concept-term {
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+    font-size: 15px;
+    padding-right: 18px;
+    min-width: 160px;
+  }
+
+  /* UI guide */
+  .ui-guide {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .ui-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .ui-item-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+  }
+  .ui-item-desc {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #333;
+  }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--card-bg);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: var(--mono);
+    color: var(--accent);
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .flow-arrow {
+    font-size: 18px;
+    color: var(--dim);
+    padding: 0 6px;
+    flex-shrink: 0;
+  }
+
+  .note {
+    background: #eef2f8;
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 3px 3px 0;
+    font-size: 15px;
+    color: #334;
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+  .note strong { color: var(--accent); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  @media(max-width: 600px) {
+    .ui-guide { grid-template-columns: 1fr; }
+    .doc-title { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <a href="minesweeper_agent.html" class="back-link">← BACK TO DEMO</a>
+
+  <div class="doc-title">The AI Agent</div>
+  <div class="doc-subtitle">A guide to this demonstration &mdash; prepared for the lecture on technical aspects of AI</div>
+
+  <!-- PART 1 -->
+  <div class="section">
+    <div class="section-number">Part 1</div>
+    <h2>What is an AI Agent?</h2>
+    <p class="lead">An <strong>AI agent</strong> is a system that <em>perceives</em> its environment, <em>reasons</em> about what it observes, and <em>acts</em> to achieve a goal — then repeats this cycle.</p>
+    <p>Unlike a simple chatbot that responds to a single question, an agent operates over time in a dynamic environment. It maintains a goal, gathers information through sensors or inputs, uses an AI model to decide what to do next, and executes actions that change the world around it. It may also retain memory of past experience to inform future decisions.</p>
+    <p>The key insight is the loop: <strong>perceive → reason → act → perceive again</strong>. This cycle is what makes a system an <em>agent</em> rather than a mere question-answering tool.</p>
+
+    <div class="flow">
+      <div class="flow-box">ENVIRONMENT</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">PERCEPTION<br><small>(read state)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">AI REASONING<br><small>(Claude / GPT…)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">ACTION<br><small>(change state)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">ENVIRONMENT</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- PART 2 -->
+  <div class="section">
+    <div class="section-number">Part 2</div>
+    <h2>About This Demo</h2>
+    <p class="lead">The demo shows a concrete AI agent playing <strong>Minesweeper</strong> — a puzzle game where a minefield must be cleared without triggering any hidden mines.</p>
+    <p>The agent reads the visible board, sends a structured description of it to a large language model (such as Claude or GPT), receives back a reasoned set of moves in plain text, and executes them on the board. The full communication between agent and AI is shown on screen, so you can follow the reasoning step by step.</p>
+    <p>After each game, the AI writes a brief reflection in natural language — its "memory" — which is stored and fed back to it at the start of the next game. This illustrates how agents can accumulate experience over time.</p>
+
+    <div class="ui-guide">
+      <div class="ui-item">
+        <div class="ui-item-label">Board State Sent to AI</div>
+        <div class="ui-item-desc">The exact text sent to the AI each turn. <code>?</code> = unknown square, <code>F</code> = flag, numbers = revealed clues. This is the agent's "perception."</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">Agent Memory</div>
+        <div class="ui-item-desc">Notes the AI wrote about past games, stored in your browser. Fed back to the AI at the start of each new game. Persists across page reloads.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">System Prompt</div>
+        <div class="ui-item-desc">Hidden instructions given to the AI — the game rules, output format, memory instructions. Editable live. This is how the agent is "programmed."</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">AI Communication Log</div>
+        <div class="ui-item-desc">The conversation between agent and AI in real time. Green = agent sends board state. Blue = AI responds with reasoning and moves.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">AI Step / Auto Play</div>
+        <div class="ui-item-desc">Step: one full perception–reason–act cycle. Auto: runs continuously until the game ends. Each step is one API call to the AI.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">Model Selector</div>
+        <div class="ui-item-desc">Choose which AI model powers the agent. Different models show different reasoning styles, speeds, and quality — try them and compare.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">Cell highlights</div>
+        <div class="ui-item-desc"><span style="color:#00d4ff">■ Blue</span> = confident open. <span style="color:#ffcc00">■ Yellow</span> = probabilistic guess. <span style="color:#ff9900">■ Orange</span> = placing a flag.</div>
+      </div>
+      <div class="ui-item">
+        <div class="ui-item-label">Manual Mode</div>
+        <div class="ui-item-desc">Check this box to play the game yourself. Left-click opens a square; right-click places a flag. The AI and manual modes can be combined.</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Important technical note:</strong> There is no persistent connection to the AI. Every time the agent acts, a complete fresh request is sent — including the full conversation history and the system prompt. The AI has no memory of its own; continuity is maintained by the agent re-sending everything each time.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- PART 3 -->
+  <div class="section">
+    <div class="section-number">Part 3</div>
+    <h2>Key Concepts to Remember</h2>
+
+    <table class="concepts">
+      <thead>
+        <tr>
+          <th>CONCEPT</th>
+          <th>WHAT IT MEANS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="concept-term">Perception–Action Loop</td>
+          <td>The agent observes the environment, decides, acts, and then observes again. This cycle — not any single decision — is what defines agency.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Environment</td>
+          <td>The world the agent operates in. Here it is the Minesweeper board. In real applications it could be the web, a legal database, a contract, or a computer desktop.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">System Prompt</td>
+          <td>The instruction document given to the AI before the conversation starts. It defines the agent's role, rules, and constraints. Editing it changes behaviour instantly — like rewriting the agent's constitution.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Stateless AI</td>
+          <td>The AI model itself remembers nothing between calls. All context — history, board state, memory — is reconstructed and re-sent by the agent each time. The appearance of continuity is engineered, not intrinsic.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Memory</td>
+          <td>Information retained across episodes. Here the AI writes its own memory in natural language after each game. True long-term memory requires external storage (database); this demo uses the browser's local storage.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Uncertainty & Guessing</td>
+          <td>When logic is exhausted, the agent must guess. It marks such moves explicitly ("guess"). This is honest epistemic behaviour — a well-designed agent does not pretend certainty it does not have.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Grounding</td>
+          <td>The process of connecting the AI's abstract language to concrete actions in the real world. Here, "OPEN D4" must be parsed and executed on the actual board. This translation layer is the agent's job.</td>
+        </tr>
+        <tr>
+          <td class="concept-term">Free-tier AI via Puter.js</td>
+          <td>The AI calls are routed through Puter.js, a library that lets users access major AI models (Claude, GPT, Gemini…) through their own Puter account, at no cost to the developer. Each user pays for their own usage.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
