@@ -447,23 +447,44 @@ function renderModelCards() {
 // ═══════════════════════════════════════
 //  PUTER STATUS
 // ═══════════════════════════════════════
-async function checkPuterStatus() {
+async function checkPuterStatus(testCall = true) {
   const el  = document.getElementById('puter-status');
   const txt = document.getElementById('puter-status-text');
   const btn = document.getElementById('puter-auth-btn');
-  try {
-    await puter.ai.chat([{role:'user', content:'hi'}], { model: 'claude-haiku-4-5' });
-    el.className = 'puter-status connected';
-    txt.textContent = 'PUTER CONNECTED';
-    btn.textContent = 'SIGN OUT';
-    btn.style.borderColor = '';
-    btn.style.color = '';
-  } catch(e) {
+
+  const signedIn = puter.auth.isSignedIn();
+
+  if (!signedIn) {
     el.className = 'puter-status error';
     txt.textContent = 'NOT CONNECTED';
     btn.textContent = 'SIGN IN';
     btn.style.borderColor = 'var(--accent3)';
     btn.style.color = 'var(--accent3)';
+    return;
+  }
+
+  // Only do the live test call on initial page load, not after sign-out
+  if (testCall) {
+    try {
+      await puter.ai.chat([{role:'user', content:'hi'}], { model: 'claude-haiku-4-5' });
+      el.className = 'puter-status connected';
+      txt.textContent = 'PUTER CONNECTED';
+      btn.textContent = 'SIGN OUT';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    } catch(e) {
+      el.className = 'puter-status error';
+      txt.textContent = 'NOT CONNECTED';
+      btn.textContent = 'SIGN IN';
+      btn.style.borderColor = 'var(--accent3)';
+      btn.style.color = 'var(--accent3)';
+    }
+  } else {
+    el.className = 'puter-status connected';
+    txt.textContent = 'PUTER CONNECTED';
+    btn.textContent = 'SIGN OUT';
+    btn.style.borderColor = '';
+    btn.style.color = '';
   }
 }
 
@@ -474,15 +495,17 @@ async function togglePuterAuth() {
     if (puter.auth.isSignedIn()) {
       await puter.auth.signOut();
       addLog('system-msg', 'Signed out from Puter.');
+      await checkPuterStatus(false); // no test call — avoids triggering auto sign-in
     } else {
       await puter.auth.signIn();
       addLog('system-msg', 'Signed in to Puter.');
+      await checkPuterStatus(false);
     }
   } catch(e) {
     addLog('system-msg', 'Auth action cancelled or failed.');
+    await checkPuterStatus(false);
   }
   btn.disabled = false;
-  await checkPuterStatus();
 }
 
 // ═══════════════════════════════════════
