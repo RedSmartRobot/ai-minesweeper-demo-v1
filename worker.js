@@ -31,8 +31,19 @@ export default {
     }
 
     if (request.method !== 'POST') {
-      return new Response('Only POST is supported', { status: 405, headers: CORS });
-    }
+  return new Response('Only POST is supported', { status: 405, headers: CORS });
+}
+
+// Origin check — only allow requests from your demo page
+const allowedOrigins = [
+  'https://redsmartrobot.github.io/ai-minesweeper-demo-v1',   // ← replace with your actual domain
+  'http://localhost',              // for local testing
+  'null',                          // for opening HTML file directly from disk
+];
+const origin = request.headers.get('Origin') || '';
+if (!allowedOrigins.some(o => origin.startsWith(o))) {
+  return new Response('Forbidden', { status: 403, headers: CORS });
+}
 
     // Determine provider from header (default: groq)
     const provider = (request.headers.get('X-AI-Provider') || 'groq').toLowerCase();
