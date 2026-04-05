@@ -31,19 +31,8 @@ export default {
     }
 
     if (request.method !== 'POST') {
-  return new Response('Only POST is supported', { status: 405, headers: CORS });
-}
-
-// Origin check — only allow requests from your demo page
-const allowedOrigins = [
-  'https://redsmartrobot.github.io/ai-minesweeper-demo-v1',   // ← replace with your actual domain
-  'http://localhost',              // for local testing
-  'null',                          // for opening HTML file directly from disk
-];
-const origin = request.headers.get('Origin') || '';
-if (!allowedOrigins.some(o => origin.startsWith(o))) {
-  return new Response('Forbidden', { status: 403, headers: CORS });
-}
+      return new Response('Only POST is supported', { status: 405, headers: CORS });
+    }
 
     // Determine provider from header (default: groq)
     const provider = (request.headers.get('X-AI-Provider') || 'groq').toLowerCase();
@@ -64,13 +53,24 @@ if (!allowedOrigins.some(o => origin.startsWith(o))) {
       );
     }
 
-    // Forward the request body unchanged
-    let body;
+    // Forward the request body, adding max_completion_tokens for Gemini
+    let bodyObj;
     try {
-      body = await request.text();
+      const rawBody = await request.text();
+      bodyObj = JSON.parse(rawBody);
     } catch {
-      return new Response('Could not read request body', { status: 400, headers: CORS });
+      return new Response('Invalid JSON body', { status: 400, headers: CORS });
     }
+
+    // Gemini's OpenAI-compatible endpoint uses max_completion_tokens, not max_tokens
+    if (provider === 'gemini') {
+      bodyObj.max_completion_tokens = bodyObj.max_completion_tokens || bodyObj.max_tokens || 2048;
+      delete bodyObj.max_tokens;
+    } else {
+      bodyObj.max_tokens = bodyObj.max_tokens || 2048;
+    }
+
+    const finalBody = JSON.stringify(bodyObj);
 
     // Call the upstream AI API
     let upstream;
@@ -81,7 +81,7 @@ if (!allowedOrigins.some(o => origin.startsWith(o))) {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body,
+        body: finalBody,
       });
     } catch (err) {
       return new Response(
