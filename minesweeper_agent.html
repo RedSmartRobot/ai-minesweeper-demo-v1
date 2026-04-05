@@ -566,13 +566,13 @@ STRATEGY:
 - When pure logic is exhausted, guess probabilistically. Edges and corners are slightly safer as first moves.
 - Never open a flagged square.
 
-RESPONSE FORMAT:
-Write a short reasoning paragraph (2–5 sentences).
-Then on a new line write exactly "ACTIONS:" followed by one action per line:
+RESPONSE FORMAT — ACTIONS MUST COME FIRST:
+Start with "ACTIONS:" immediately, one action per line:
   OPEN A3
   FLAG B5
   OPEN C4 (guess)
-Mark probabilistic moves with "(guess)". You may issue multiple actions per turn.
+Mark probabilistic moves with "(guess)". You may issue multiple actions.
+After the actions, write a brief reasoning note (1–3 sentences) starting with "REASONING:".
 
 MEMORY INSTRUCTIONS:
 After a game ends (win or loss), write a memory entry on its own line in exactly this format:
@@ -818,6 +818,8 @@ function parseActions(text) {
   for (const line of lines) {
     const t = line.trim();
     if (/^ACTIONS\s*:/i.test(t)) { inActions=true; continue; }
+    if (/^REASONING\s*:/i.test(t)) break; // stop at reasoning section
+    if (/^MEMORY\s*:/i.test(t))   break; // stop at memory section
     if (!inActions) continue;
     const m = t.match(/^(OPEN|FLAG)\s+([A-H][1-8])(.*)?$/i);
     if (m) {
@@ -838,8 +840,17 @@ function parseMemory(text) {
 }
 
 function extractReasoning(text) {
-  const idx = text.search(/^ACTIONS\s*:/im);
-  let r = idx < 0 ? text : text.substring(0, idx);
+  // New format: REASONING: comes after ACTIONS:
+  const reasonIdx = text.search(/^REASONING\s*:/im);
+  if (reasonIdx >= 0) {
+    return text.substring(reasonIdx)
+      .replace(/^REASONING\s*:\s*/i, '')
+      .replace(/^MEMORY:.*$/im, '')
+      .trim();
+  }
+  // Fallback: old format where reasoning came before ACTIONS:
+  const actIdx = text.search(/^ACTIONS\s*:/im);
+  let r = actIdx < 0 ? text : text.substring(0, actIdx);
   r = r.replace(/^MEMORY:.*$/im, '').trim();
   return r;
 }
