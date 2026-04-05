@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Connection — Minesweeper Agent</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=VT323&display=swap');
+  :root {
+    --bg:#0a0e1a; --panel:#111827; --border:#1e3a5f;
+    --accent:#00d4ff; --accent2:#ff6b35; --accent3:#39ff14;
+    --text:#c9d6e3; --text-dim:#4a6080;
+    --mine-red:#ff2244; --flag-col:#ff9900;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; font-size:15px; min-height:100vh; }
+  body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px); pointer-events:none; z-index:9999; }
+
+  header { text-align:center; padding:16px 20px 10px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,#0d1829 0%,var(--bg) 100%); }
+  header h1 { font-family:'VT323',monospace; font-size:2rem; color:var(--accent); text-shadow:0 0 18px var(--accent); letter-spacing:4px; }
+  header p  { color:var(--text-dim); font-size:12px; letter-spacing:1px; margin-top:2px; }
+
+  .back-link { display:inline-flex; align-items:center; gap:5px; font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); border-radius:2px; padding:4px 10px; transition:all .15s; }
+  .back-link:hover { color:var(--accent); border-color:var(--accent); }
+
+  .page { max-width:860px; margin:0 auto; padding:20px 16px 60px; }
+  .top-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+
+  /* Tier tabs */
+  .tier-tabs { display:flex; gap:6px; margin-bottom:20px; }
+  .tier-tab {
+    flex:1; padding:10px 8px; text-align:center; cursor:pointer;
+    font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:1px;
+    border:1px solid var(--border); border-radius:3px; background:transparent;
+    color:var(--text-dim); transition:all .15s;
+  }
+  .tier-tab:hover { border-color:var(--accent); color:var(--text); }
+  .tier-tab.active { border-color:var(--accent); color:var(--accent); background:rgba(0,212,255,0.07); }
+  .tier-icon { font-size:18px; display:block; margin-bottom:4px; }
+
+  /* Panels */
+  .tier-panel { display:none; }
+  .tier-panel.active { display:block; }
+
+  .section { background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:16px; margin-bottom:14px; }
+  .section-title { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:2px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+
+  label { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--text-dim); display:block; margin-bottom:4px; letter-spacing:1px; }
+  input[type=text], input[type=password] {
+    width:100%; font-family:'Share Tech Mono',monospace; font-size:12px;
+    background:#050a0f; border:1px solid var(--border); color:var(--text);
+    padding:7px 10px; border-radius:2px; outline:none; transition:border .15s;
+  }
+  input[type=text]:focus, input[type=password]:focus { border-color:var(--accent); }
+
+  .field { margin-bottom:14px; }
+  .field:last-child { margin-bottom:0; }
+
+  /* Model grid */
+  .model-grid { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .model-card {
+    display:flex; align-items:center; gap:6px; padding:6px 12px;
+    border:1px solid var(--border); border-radius:3px; cursor:pointer;
+    font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text-dim);
+    background:transparent; transition:all .15s; white-space:nowrap;
+  }
+  .model-card:hover { border-color:var(--accent); color:var(--text); background:rgba(0,212,255,0.05); }
+  .model-card.selected { border-color:var(--accent); color:var(--accent); background:rgba(0,212,255,0.1); box-shadow:0 0 8px rgba(0,212,255,0.15); }
+  .model-logo { font-size:14px; }
+  .model-provider { font-size:9px; color:var(--text-dim); display:block; }
+
+  /* Info box */
+  .info { background:#050e1a; border:1px solid #0d2a45; border-radius:2px; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:11px; line-height:1.7; color:#6a9ab8; margin-top:10px; }
+  .info a { color:var(--accent); text-decoration:none; }
+  .info a:hover { text-decoration:underline; }
+
+  /* Buttons */
+  .btn-row { display:flex; gap:8px; margin-top:18px; }
+  .btn {
+    font-family:'Share Tech Mono',monospace; font-size:12px; padding:8px 20px;
+    border:1px solid var(--border); background:transparent; color:var(--accent);
+    border-radius:2px; cursor:pointer; letter-spacing:1px; transition:all .15s;
+  }
+  .btn:hover { background:rgba(0,212,255,0.08); border-color:var(--accent); }
+  .btn.primary { border-color:var(--accent3); color:var(--accent3); }
+  .btn.primary:hover { background:rgba(57,255,20,0.08); }
+  .btn.danger { border-color:var(--mine-red); color:var(--mine-red); }
+
+  /* Status */
+  .save-status { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--accent3); display:none; margin-left:10px; }
+  .save-status.show { display:inline; }
+
+  /* Puter auth */
+  .puter-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .status-pill { display:flex; align-items:center; gap:5px; font-family:'Share Tech Mono',monospace; font-size:11px; padding:4px 10px; border:1px solid var(--border); border-radius:2px; }
+  .status-dot { width:7px; height:7px; border-radius:50%; }
+  .status-pill.connected { color:var(--accent3); border-color:rgba(57,255,20,0.3); }
+  .status-pill.connected .status-dot { background:var(--accent3); box-shadow:0 0 5px var(--accent3); }
+  .status-pill.error { color:var(--mine-red); border-color:rgba(255,34,68,0.3); }
+  .status-pill.error .status-dot { background:var(--mine-red); }
+  .status-pill.unknown { color:var(--text-dim); }
+  .status-pill.unknown .status-dot { background:#555; }
+
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+<script src="https://js.puter.com/v2/"></script>
+</head>
+<body>
+<header>
+  <h1>⚙ AI CONNECTION</h1>
+  <p>CONFIGURE HOW THE MINESWEEPER AGENT CONNECTS TO AN AI MODEL</p>
+</header>
+
+<div class="page">
+  <div class="top-bar">
+    <a href="minesweeper_agent.html" class="back-link">← BACK TO DEMO</a>
+    <span class="save-status" id="save-status">✓ SAVED</span>
+  </div>
+
+  <!-- TIER TABS -->
+  <div class="tier-tabs">
+    <div class="tier-tab" id="tab-proxy" onclick="switchTab('proxy')">
+      <span class="tier-icon">🔑</span>MY API KEYS<br><small style="color:var(--text-dim);font-size:9px;">Groq / Gemini via proxy</small>
+    </div>
+    <div class="tier-tab" id="tab-user-groq" onclick="switchTab('user-groq')">
+      <span class="tier-icon">🟣</span>YOUR OWN GROQ KEY<br><small style="color:var(--text-dim);font-size:9px;">Enter your free key directly</small>
+    </div>
+    <div class="tier-tab" id="tab-puter" onclick="switchTab('puter')">
+      <span class="tier-icon">☁️</span>PUTER.JS<br><small style="color:var(--text-dim);font-size:9px;">Fallback — requires Puter account</small>
+    </div>
+  </div>
+
+  <!-- ── PANEL 1: MY PROXY ── -->
+  <div class="tier-panel" id="panel-proxy">
+    <div class="section">
+      <div class="section-title">CLOUDFLARE WORKER URL</div>
+      <div class="field">
+        <label>WORKER URL</label>
+        <input type="text" id="proxy-worker-url"
+          placeholder="https://minesweeper-demo.your-name.workers.dev"
+          value="https://minesweeper-demo.sergey-budylin.workers.dev">
+      </div>
+      <div class="info">
+        This is the URL of your Cloudflare Worker proxy. It keeps your API keys hidden.<br>
+        → <a href="setup_guide.html" target="_blank">Setup guide: how to deploy the worker</a>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">SELECT MODEL</div>
+      <div class="model-grid" id="model-grid-proxy"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 2: USER'S OWN GROQ KEY ── -->
+  <div class="tier-panel" id="panel-user-groq">
+    <div class="section">
+      <div class="section-title">YOUR GROQ API KEY</div>
+      <div class="field">
+        <label>API KEY (stored only in your browser)</label>
+        <input type="password" id="user-groq-key" placeholder="gsk_…">
+      </div>
+      <div class="info">
+        Get a free Groq key (no credit card) at <a href="https://console.groq.com" target="_blank">console.groq.com</a>
+        → API Keys → Create API Key.<br>
+        Your key is stored only in your browser's localStorage and is never sent anywhere except directly to Groq.<br>
+        Free tier: <strong>14,400 requests/day</strong>, resets daily.
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">SELECT MODEL</div>
+      <div class="model-grid" id="model-grid-user-groq"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL 3: PUTER.JS ── -->
+  <div class="tier-panel" id="panel-puter">
+    <div class="section">
+      <div class="section-title">PUTER.JS CONNECTION</div>
+      <div class="puter-row">
+        <div class="status-pill unknown" id="puter-pill">
+          <div class="status-dot"></div>
+          <span id="puter-pill-text">CHECKING…</span>
+        </div>
+        <button class="btn" id="puter-auth-btn" onclick="togglePuterAuth()">SIGN IN</button>
+      </div>
+      <div class="info" style="margin-top:10px;">
+        Puter.js routes requests through your Puter account. Free to use but credits are
+        non-renewable on the free tier.<br>
+        Sign up at <a href="https://puter.com" target="_blank">puter.com</a> if you don't have an account.
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">SELECT MODEL</div>
+      <div class="model-grid" id="model-grid-puter"></div>
+    </div>
+  </div>
+
+  <!-- SAVE BUTTON -->
+  <div class="btn-row">
+    <button class="btn primary" onclick="saveAndReturn()">✓ SAVE &amp; RETURN TO DEMO</button>
+    <button class="btn" onclick="saveSettings()">SAVE</button>
+  </div>
+</div>
+
+<script>
+// ── Model definitions ──
+const PROXY_MODELS = [
+  { id: 'llama-3.3-70b-versatile',                   label: 'Llama 3.3 70B',    sub: 'Groq',   logo: '🟣' },
+  { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout',    sub: 'Groq',   logo: '🟣' },
+  { id: 'gemini-2.5-flash',                          label: 'Gemini 2.5 Flash', sub: 'Google', logo: '🔵' },
+  { id: 'gemini-2.5-pro',                            label: 'Gemini 2.5 Pro',   sub: 'Google', logo: '🔵' },
+];
+const PUTER_MODELS = [
+  { id: 'claude-sonnet-4-5',       label: 'Claude Sonnet 4.5', sub: 'Anthropic', logo: '🟠' },
+  { id: 'claude-haiku-4-5',        label: 'Claude Haiku 4.5',  sub: 'Anthropic', logo: '🟡' },
+  { id: 'claude-opus-4-5',         label: 'Claude Opus 4.5',   sub: 'Anthropic', logo: '🔴' },
+  { id: 'gpt-4.1-nano',            label: 'GPT-4.1 Nano',      sub: 'OpenAI',    logo: '🟢' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash',  sub: 'Google',    logo: '🔵' },
+  { id: 'deepseek/deepseek-v3.2',  label: 'DeepSeek V3.2',     sub: 'DeepSeek',  logo: '⚪' },
+];
+
+// ── Load / Save ──
+function loadConn() {
+  return {
+    tier:       localStorage.getItem('conn_tier')        || 'proxy',
+    workerUrl:  localStorage.getItem('conn_worker_url')  || 'https://minesweeper-demo.sergey-budylin.workers.dev',
+    proxyModel: localStorage.getItem('conn_proxy_model') || PROXY_MODELS[0].id,
+    puterModel: localStorage.getItem('conn_puter_model') || PUTER_MODELS[0].id,
+    userGroqKey:localStorage.getItem('conn_user_groq')   || '',
+  };
+}
+
+function saveSettings() {
+  const tier = document.querySelector('.tier-tab.active')?.id.replace('tab-','') || 'proxy';
+  localStorage.setItem('conn_tier',        tier);
+  localStorage.setItem('conn_worker_url',  document.getElementById('proxy-worker-url').value.trim());
+  localStorage.setItem('conn_proxy_model', selectedModels['proxy'] || PROXY_MODELS[0].id);
+  localStorage.setItem('conn_puter_model', selectedModels['puter'] || PUTER_MODELS[0].id);
+  localStorage.setItem('conn_user_groq',   document.getElementById('user-groq-key').value.trim());
+  // also save user-groq model as proxy model (same list)
+  if (tier === 'user-groq') localStorage.setItem('conn_proxy_model', selectedModels['user-groq'] || PROXY_MODELS[0].id);
+  const st = document.getElementById('save-status');
+  st.classList.add('show');
+  setTimeout(() => st.classList.remove('show'), 2000);
+}
+
+function saveAndReturn() {
+  saveSettings();
+  window.location.href = 'minesweeper_agent.html';
+}
+
+// ── Tab switching ──
+function switchTab(tier) {
+  document.querySelectorAll('.tier-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tier-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tier).classList.add('active');
+  document.getElementById('panel-' + (tier === 'user-groq' ? 'user-groq' : tier)).classList.add('active');
+  if (tier === 'puter') checkPuterStatus();
+}
+
+// ── Model card rendering ──
+const selectedModels = { proxy: '', 'user-groq': '', puter: '' };
+
+function renderModelGrid(containerId, models, tierKey) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  models.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'model-card' + (m.id === selectedModels[tierKey] ? ' selected' : '');
+    card.innerHTML = `<span class="model-logo">${m.logo}</span><span><span>${m.label}</span><span class="model-provider">${m.sub}</span></span>`;
+    card.onclick = () => { selectedModels[tierKey] = m.id; renderModelGrid(containerId, models, tierKey); };
+    container.appendChild(card);
+  });
+}
+
+// ── Puter auth ──
+async function checkPuterStatus() {
+  const pill = document.getElementById('puter-pill');
+  const txt  = document.getElementById('puter-pill-text');
+  const btn  = document.getElementById('puter-auth-btn');
+  if (!puter.auth.isSignedIn()) {
+    pill.className = 'status-pill error'; txt.textContent = 'NOT SIGNED IN';
+    btn.textContent = 'SIGN IN'; btn.style.borderColor = ''; btn.style.color = '';
+    return;
+  }
+  try {
+    await puter.ai.chat([{role:'user',content:'hi'}], {model:'claude-haiku-4-5'});
+    pill.className = 'status-pill connected'; txt.textContent = 'CONNECTED';
+    btn.textContent = 'SIGN OUT'; btn.style.color = 'var(--mine-red)'; btn.style.borderColor = 'var(--mine-red)';
+  } catch(e) {
+    pill.className = 'status-pill error'; txt.textContent = 'ERROR';
+    btn.textContent = 'SIGN IN';
+  }
+}
+
+async function togglePuterAuth() {
+  const btn = document.getElementById('puter-auth-btn');
+  btn.disabled = true;
+  try {
+    if (puter.auth.isSignedIn()) { await puter.auth.signOut(); }
+    else { await puter.auth.signIn(); }
+  } catch(e) {}
+  btn.disabled = false;
+  await checkPuterStatus();
+}
+
+// ── Init ──
+(function init() {
+  const s = loadConn();
+  document.getElementById('proxy-worker-url').value = s.workerUrl;
+  document.getElementById('user-groq-key').value    = s.userGroqKey;
+  selectedModels['proxy']     = s.proxyModel || PROXY_MODELS[0].id;
+  selectedModels['user-groq'] = s.proxyModel || PROXY_MODELS[0].id;
+  selectedModels['puter']     = s.puterModel || PUTER_MODELS[0].id;
+  renderModelGrid('model-grid-proxy',     PROXY_MODELS, 'proxy');
+  renderModelGrid('model-grid-user-groq', PROXY_MODELS, 'user-groq');
+  renderModelGrid('model-grid-puter',     PUTER_MODELS, 'puter');
+  switchTab(s.tier === 'user-groq' ? 'user-groq' : s.tier === 'puter' ? 'puter' : 'proxy');
+})();
+</script>
+</body>
+</html>
