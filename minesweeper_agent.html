@@ -315,39 +315,14 @@
   </p>
 </header>
 
-<!-- CONNECTION + MODEL SELECTOR BAR -->
-<div class="model-bar" style="flex-direction:column;gap:8px;padding:10px 14px;">
-
-  <!-- Row 1: Connection tier selector -->
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
-    <span class="model-bar-label">CONNECTION:</span>
-    <div style="display:flex;gap:5px;">
-      <button class="tier-btn selected" id="tier-proxy" onclick="selectTier('proxy')">🔑 Groq / Gemini (Proxy)</button>
-      <button class="tier-btn" id="tier-puter" onclick="selectTier('puter')">☁️ Puter.js (Fallback)</button>
-    </div>
-    <div id="conn-status" class="puter-status unknown">
-      <div class="status-dot"></div>
-      <span id="conn-status-text">—</span>
-    </div>
+<!-- SLIM STATUS BAR -->
+<div class="model-bar" style="padding:7px 14px;">
+  <div id="conn-status" class="puter-status unknown">
+    <div class="status-dot"></div>
+    <span id="conn-status-text">NOT CONFIGURED</span>
   </div>
-
-  <!-- Row 2a: Proxy settings (shown when proxy tier selected) -->
-  <div id="proxy-settings" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;">
-    <span class="model-bar-label">WORKER URL:</span>
-    <input id="proxy-url" type="text" placeholder="https://your-worker.your-name.workers.dev"
-      style="font-family:'Share Tech Mono',monospace;font-size:11px;background:#050a0f;border:1px solid var(--border);
-             color:var(--text);padding:4px 8px;border-radius:2px;width:320px;">
-    <span class="model-bar-label" style="margin-left:6px;">MODEL:</span>
-    <div class="model-cards" id="model-cards-proxy"></div>
-  </div>
-
-  <!-- Row 2b: Puter settings (shown when puter tier selected) -->
-  <div id="puter-settings" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;">
-    <span class="model-bar-label">MODEL:</span>
-    <div class="model-cards" id="model-cards-puter"></div>
-    <button class="btn" id="puter-auth-btn" onclick="togglePuterAuth()" style="font-size:10px;padding:3px 10px;">SIGN OUT</button>
-  </div>
-
+  <span id="conn-model-label" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);margin-left:6px;"></span>
+  <a href="connect.html" target="_blank" class="help-link" style="margin-left:auto;">⚙ CHANGE CONNECTION</a>
 </div>
 
 <div class="main-layout">
@@ -452,76 +427,33 @@
 
 <script>
 // ═══════════════════════════════════════
-//  CONNECTION TIERS & MODELS
+//  CONNECTION SETTINGS (set by connect.html, stored in localStorage)
 // ═══════════════════════════════════════
-
-// Proxy tier models (Groq + Gemini)
 const PROXY_MODELS = [
-  // Groq models
-  { id: 'llama-3.3-70b-versatile',          label: 'Llama 3.3 70B',      logo: '🟣', provider: 'groq' },
-  { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick', logo: '🟣', provider: 'groq' },
-  { id: 'gemma2-9b-it',                     label: 'Gemma 2 9B',         logo: '🟣', provider: 'groq' },
-  // Gemini models
-  { id: 'gemini-2.5-flash',                 label: 'Gemini 2.5 Flash',   logo: '🔵', provider: 'gemini' },
-  { id: 'gemini-2.5-pro',                   label: 'Gemini 2.5 Pro',     logo: '🔵', provider: 'gemini' },
+  { id: 'llama-3.3-70b-versatile',                   label: 'Llama 3.3 70B',    provider: 'groq'   },
+  { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout',    provider: 'groq'   },
+  { id: 'gemini-2.5-flash',                          label: 'Gemini 2.5 Flash', provider: 'gemini' },
+  { id: 'gemini-2.5-pro',                            label: 'Gemini 2.5 Pro',   provider: 'gemini' },
 ];
-
-// Puter.js fallback models
 const PUTER_MODELS = [
-  { id: 'claude-sonnet-4-5',       label: 'Claude Sonnet 4.5',  logo: '🟠', provider: 'Anthropic' },
-  { id: 'claude-haiku-4-5',        label: 'Claude Haiku 4.5',   logo: '🟡', provider: 'Anthropic' },
-  { id: 'claude-opus-4-5',         label: 'Claude Opus 4.5',    logo: '🔴', provider: 'Anthropic' },
-  { id: 'gpt-4.1-nano',            label: 'GPT-4.1 Nano',       logo: '🟢', provider: 'OpenAI' },
-  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash',   logo: '🔵', provider: 'Google' },
-  { id: 'deepseek/deepseek-v3.2',  label: 'DeepSeek V3.2',      logo: '⚪', provider: 'DeepSeek' },
+  { id: 'claude-sonnet-4-5',       label: 'Claude Sonnet 4.5' },
+  { id: 'claude-haiku-4-5',        label: 'Claude Haiku 4.5'  },
+  { id: 'claude-opus-4-5',         label: 'Claude Opus 4.5'   },
+  { id: 'gpt-4.1-nano',            label: 'GPT-4.1 Nano'      },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash'  },
+  { id: 'deepseek/deepseek-v3.2',  label: 'DeepSeek V3.2'     },
 ];
 
-let activeTier        = 'proxy';   // 'proxy' | 'puter'
-let selectedProxyModel = PROXY_MODELS[0].id;
-let selectedPuterModel = PUTER_MODELS[0].id;
-
-function selectTier(tier) {
-  activeTier = tier;
-  document.getElementById('tier-proxy').classList.toggle('selected', tier === 'proxy');
-  document.getElementById('tier-puter').classList.toggle('selected', tier === 'puter');
-  document.getElementById('proxy-settings').style.display = tier === 'proxy' ? 'flex' : 'none';
-  document.getElementById('puter-settings').style.display = tier === 'puter' ? 'flex' : 'none';
-  updateConnStatus('unknown', tier === 'proxy' ? 'Enter worker URL above' : 'CHECKING…');
-  if (tier === 'puter') checkPuterStatus(true);
+function loadConn() {
+  return {
+    tier:       localStorage.getItem('conn_tier')        || 'proxy',
+    workerUrl:  localStorage.getItem('conn_worker_url')  || '',
+    proxyModel: localStorage.getItem('conn_proxy_model') || PROXY_MODELS[0].id,
+    puterModel: localStorage.getItem('conn_puter_model') || PUTER_MODELS[0].id,
+    userGroqKey:localStorage.getItem('conn_user_groq')   || '',
+  };
 }
 
-function selectedModel() {
-  return activeTier === 'proxy' ? selectedProxyModel : selectedPuterModel;
-}
-
-function renderModelCards(containerId, models, getSelected, setSelected) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-  models.forEach(m => {
-    const card = document.createElement('div');
-    card.className = 'model-card' + (m.id === getSelected() ? ' selected' : '');
-    card.title = m.provider;
-    card.innerHTML = `<span class="model-logo">${m.logo}</span>${m.label}`;
-    card.onclick = () => {
-      setSelected(m.id);
-      renderModelCards(containerId, models, getSelected, setSelected);
-      addLog('system-msg', 'Model switched to: ' + m.label + ' (' + m.provider + ')');
-    };
-    container.appendChild(card);
-  });
-}
-
-function renderAllModelCards() {
-  renderModelCards('model-cards-proxy', PROXY_MODELS,
-    () => selectedProxyModel, v => { selectedProxyModel = v; });
-  renderModelCards('model-cards-puter', PUTER_MODELS,
-    () => selectedPuterModel, v => { selectedPuterModel = v; });
-}
-
-// ═══════════════════════════════════════
-//  CONNECTION STATUS
-// ═══════════════════════════════════════
 function updateConnStatus(state, text) {
   const el  = document.getElementById('conn-status');
   const txt = document.getElementById('conn-status-text');
@@ -529,93 +461,75 @@ function updateConnStatus(state, text) {
   txt.textContent = text;
 }
 
-// ── Proxy tier: call the worker ──
-async function callProxy(messages) {
-  const workerUrl = document.getElementById('proxy-url').value.trim();
-  if (!workerUrl) throw new Error('Worker URL is empty. Enter your Cloudflare Worker URL above.');
-
-  const model    = selectedProxyModel;
-  const provider = PROXY_MODELS.find(m => m.id === model)?.provider || 'groq';
-
-  const resp = await fetch(workerUrl, {
-    method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'X-AI-Provider': provider,
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 1000 }),
-  });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Worker error ${resp.status}: ${err}`);
+function updateConnStatusBar() {
+  const s = loadConn();
+  const lbl = document.getElementById('conn-model-label');
+  if (s.tier === 'puter') {
+    const ml = PUTER_MODELS.find(m => m.id === s.puterModel)?.label || s.puterModel;
+    updateConnStatus('unknown', 'PUTER.JS');
+    if (lbl) lbl.textContent = '· ' + ml;
+  } else if (s.tier === 'user-groq') {
+    const ml = PROXY_MODELS.find(m => m.id === s.proxyModel)?.label || s.proxyModel;
+    updateConnStatus(s.userGroqKey ? 'connected' : 'error', s.userGroqKey ? 'USER GROQ KEY' : 'NO KEY ENTERED');
+    if (lbl) lbl.textContent = s.userGroqKey ? '· ' + ml : '';
+  } else {
+    const ml = PROXY_MODELS.find(m => m.id === s.proxyModel)?.label || s.proxyModel;
+    updateConnStatus(s.workerUrl ? 'connected' : 'error', s.workerUrl ? 'PROXY READY' : 'WORKER URL NOT SET — click ⚙ CHANGE CONNECTION');
+    if (lbl) lbl.textContent = s.workerUrl ? '· ' + ml : '';
   }
-
-  const data = await resp.json();
-  // OpenAI-compatible response: choices[0].message.content
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('Unexpected response format: ' + JSON.stringify(data));
-  updateConnStatus('connected', provider.toUpperCase() + ' CONNECTED');
-  return text;
 }
 
-// ── Puter tier ──
+async function callProxy(messages) {
+  const s = loadConn();
+  const model    = s.proxyModel;
+  const provider = PROXY_MODELS.find(m => m.id === model)?.provider || 'groq';
+
+  if (s.tier === 'user-groq') {
+    if (!s.userGroqKey) throw new Error('No Groq API key. Go to ⚙ CHANGE CONNECTION.');
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.userGroqKey },
+      body: JSON.stringify({ model, messages, max_tokens: 2048 }),
+    });
+    if (!resp.ok) { const e = await resp.text(); throw new Error(`Groq ${resp.status}: ${e}`); }
+    const data = await resp.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Bad Groq response: ' + JSON.stringify(data));
+    updateConnStatus('connected', 'USER GROQ · ' + (PROXY_MODELS.find(m=>m.id===model)?.label||model));
+    return text;
+  } else {
+    if (!s.workerUrl) throw new Error('Worker URL not set. Go to ⚙ CHANGE CONNECTION.');
+    const resp = await fetch(s.workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-AI-Provider': provider },
+      body: JSON.stringify({ model, messages, max_tokens: 2048 }),
+    });
+    if (!resp.ok) { const e = await resp.text(); throw new Error(`Worker error ${resp.status}: ${e}`); }
+    const data = await resp.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Unexpected response: ' + JSON.stringify(data));
+    updateConnStatus('connected', provider.toUpperCase() + ' · ' + (PROXY_MODELS.find(m=>m.id===model)?.label||model));
+    return text;
+  }
+}
+
 async function callPuter(messages) {
-  const response = await puter.ai.chat(
-    messages,
-    { model: selectedPuterModel }
-  );
+  const s = loadConn();
+  const response = await puter.ai.chat(messages, { model: s.puterModel });
   return extractText(response);
 }
 
-// ── Unified call ──
 async function callAI(messages) {
-  if (activeTier === 'proxy') return callProxy(messages);
-  return callPuter(messages);
-}
-
-// ── Puter status ──
-async function checkPuterStatus(testCall = true) {
-  const btn = document.getElementById('puter-auth-btn');
-  const signedIn = puter.auth.isSignedIn();
-  if (!signedIn) {
-    updateConnStatus('error', 'NOT CONNECTED');
-    if (btn) { btn.textContent = 'SIGN IN'; btn.style.borderColor = 'var(--accent3)'; btn.style.color = 'var(--accent3)'; }
-    return;
-  }
-  if (testCall) {
-    try {
-      await puter.ai.chat([{role:'user', content:'hi'}], { model: 'claude-haiku-4-5' });
-      updateConnStatus('connected', 'PUTER CONNECTED');
-      if (btn) { btn.textContent = 'SIGN OUT'; btn.style.borderColor = ''; btn.style.color = ''; }
-    } catch(e) {
-      updateConnStatus('error', 'NOT CONNECTED');
-      if (btn) { btn.textContent = 'SIGN IN'; btn.style.borderColor = 'var(--accent3)'; btn.style.color = 'var(--accent3)'; }
-    }
-  } else {
-    updateConnStatus('connected', 'PUTER CONNECTED');
-    if (btn) { btn.textContent = 'SIGN OUT'; btn.style.borderColor = ''; btn.style.color = ''; }
-  }
+  const s = loadConn();
+  if (s.tier === 'puter') return callPuter(messages);
+  return callProxy(messages);
 }
 
 async function togglePuterAuth() {
-  const btn = document.getElementById('puter-auth-btn');
-  btn.disabled = true;
   try {
-    if (puter.auth.isSignedIn()) {
-      await puter.auth.signOut();
-      addLog('system-msg', 'Signed out from Puter.');
-      await checkPuterStatus(false);
-    } else {
-      await puter.auth.signIn();
-      addLog('system-msg', 'Signed in to Puter.');
-      await checkPuterStatus(false);
-    }
-  } catch(e) {
-    addLog('system-msg', 'Auth action cancelled or failed.');
-    await checkPuterStatus(false);
-  }
-  btn.disabled = false;
+    if (puter.auth.isSignedIn()) { await puter.auth.signOut(); addLog('system-msg','Signed out from Puter.'); }
+    else { await puter.auth.signIn(); addLog('system-msg','Signed in to Puter.'); }
+  } catch(e) { addLog('system-msg','Auth cancelled.'); }
 }
 
 // ═══════════════════════════════════════
@@ -1139,8 +1053,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ═══════════════════════════════════════
 document.getElementById('prompt-box').value = DEFAULT_PROMPT;
 renderMemory();
-renderAllModelCards();
-selectTier('proxy');   // start in proxy tier; no Puter test call needed
+updateConnStatusBar();
 initBoard();
 renderBoard();
 </script>
