@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup Guide — AI Proxy for Minesweeper Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap');
+  :root { --bg:#f7f4ef; --text:#1a1a1a; --dim:#666; --accent:#1a3a6b; --border:#ddd; --mono:'Share Tech Mono',monospace; --green:#1a6b2a; --warn:#7a4a00; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'EB Garamond',Georgia,serif; font-size:18px; line-height:1.75; }
+  .page { max-width:800px; margin:0 auto; padding:48px 28px 80px; }
+  .back-link { display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:11px; color:var(--dim); text-decoration:none; border:1px solid var(--border); border-radius:2px; padding:4px 10px; margin-bottom:36px; transition:all .15s; }
+  .back-link:hover { color:var(--accent); border-color:var(--accent); }
+  h1 { font-size:2.2rem; font-weight:600; color:var(--accent); margin-bottom:6px; line-height:1.2; }
+  .subtitle { font-style:italic; color:var(--dim); font-size:1rem; margin-bottom:36px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+  h2 { font-size:1.4rem; font-weight:600; color:var(--text); margin:36px 0 12px; }
+  h3 { font-size:1.1rem; font-weight:600; color:var(--accent); margin:24px 0 8px; font-family:var(--mono); letter-spacing:1px; }
+  p { margin-bottom:12px; }
+  a { color:var(--accent); }
+  hr { border:none; border-top:1px solid var(--border); margin:36px 0; }
+
+  /* Steps */
+  .steps { counter-reset:step; margin:16px 0; }
+  .step { display:flex; gap:16px; margin-bottom:20px; align-items:flex-start; }
+  .step-num { counter-increment:step; content:counter(step); flex-shrink:0; width:30px; height:30px; background:var(--accent); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:13px; margin-top:3px; }
+  .step-num::before { content:counter(step); }
+  .step-body { flex:1; }
+  .step-body p:last-child { margin-bottom:0; }
+
+  /* Code blocks */
+  pre {
+    background:#1a1a2e; color:#a8d8a8; font-family:var(--mono); font-size:12px;
+    padding:12px 16px; border-radius:3px; overflow-x:auto; margin:10px 0;
+    line-height:1.6; white-space:pre-wrap; word-break:break-all;
+  }
+  code { font-family:var(--mono); font-size:14px; background:#e8e4dc; padding:1px 5px; border-radius:2px; }
+
+  /* Callouts */
+  .tip  { background:#eef4ee; border-left:3px solid var(--green); padding:10px 14px; border-radius:0 3px 3px 0; font-size:16px; margin:14px 0; }
+  .warn { background:#fdf3e3; border-left:3px solid #c07800; padding:10px 14px; border-radius:0 3px 3px 0; font-size:16px; margin:14px 0; }
+  .tip strong  { color:var(--green); }
+  .warn strong { color:var(--warn); }
+
+  .provider-section { border:1px solid var(--border); border-radius:4px; padding:20px 22px; margin:20px 0; }
+  .provider-title { font-family:var(--mono); font-size:12px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <a href="minesweeper_agent.html" class="back-link">← BACK TO DEMO</a>
+
+  <h1>Setup Guide</h1>
+  <div class="subtitle">How to get free API keys and deploy the proxy — step by step</div>
+
+  <p>The demo can connect to AI in two ways. The <strong>primary</strong> way (recommended) uses your own free API keys for Groq or Google Gemini, routed through a small Cloudflare Worker that keeps the keys hidden from the browser. The <strong>fallback</strong> uses Puter.js, which requires no setup but has a non-renewable credit limit.</p>
+  <p>This guide covers: getting the keys, deploying the worker, and entering the URL in the demo.</p>
+
+  <hr>
+
+  <h2>Part A — Get Your Free API Keys</h2>
+  <p>Get one or both. Groq is fastest; Gemini has higher daily limits.</p>
+
+  <div class="provider-section">
+    <div class="provider-title">🟣 GROQ — up to 14,400 requests/day, resets daily, no credit card</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Go to <a href="https://console.groq.com" target="_blank">console.groq.com</a> and click <strong>Sign Up</strong>. You can sign up with Google or GitHub — no credit card is needed.</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Once logged in, click <strong>API Keys</strong> in the left sidebar, then <strong>Create API Key</strong>. Give it any name (e.g. "minesweeper-demo").</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Copy the key — it starts with <code>gsk_…</code>. <strong>Save it now</strong>; it will not be shown again. You will paste it into the Cloudflare Worker later.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="provider-section">
+    <div class="provider-title">🔵 GOOGLE GEMINI — generous daily limits, resets daily, no credit card</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Go to <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> and sign in with your Google account.</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Click <strong>Get API Key</strong> (top left), then <strong>Create API key</strong>. Select "Create API key in new project" if prompted.</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">
+        <p>Copy the key — it starts with <code>AIza…</code>. Save it for the next part.</p>
+      </div></div>
+    </div>
+    <div class="warn"><strong>Note:</strong> On the free tier, Google may use your prompts to improve its models. This is fine for a demo but worth mentioning to your students.</div>
+  </div>
+
+  <hr>
+
+  <h2>Part B — Deploy the Cloudflare Worker</h2>
+  <p>Cloudflare Workers are tiny serverless functions that run on Cloudflare's global network. The free tier allows <strong>100,000 requests/day</strong> — far more than you need. No credit card is required.</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Go to <a href="https://dash.cloudflare.com/sign-up/workers-and-pages" target="_blank">dash.cloudflare.com/sign-up/workers-and-pages</a> and create a free Cloudflare account (email + password, no credit card).</p>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>After signing in, click <strong>Workers &amp; Pages</strong> in the left sidebar, then click <strong>Create</strong> → <strong>Create Worker</strong>.</p>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Give the worker any name (e.g. <code>ai-proxy</code>). Cloudflare will assign it a URL like <code>https://ai-proxy.your-name.workers.dev</code>. Click <strong>Deploy</strong>.</p>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>You are now in the online code editor. <strong>Delete all existing code</strong> in the editor and paste the entire contents of the <code>worker.js</code> file provided with this demo.</p>
+      <div class="tip"><strong>Tip:</strong> The <code>worker.js</code> file is included in the same folder as this guide. Open it in any text editor, select all, copy, and paste into the Cloudflare editor.</div>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Click <strong>Deploy</strong> (top right). The worker is now live, but has no API keys yet.</p>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>To add your API keys, click the <strong>Settings</strong> tab (while viewing your worker), then <strong>Variables and Secrets</strong>, then <strong>Add variable</strong>.</p>
+      <p>Add these variables (use <strong>Secret</strong> type to keep them hidden):</p>
+      <pre>Variable name:  GROQ_API_KEY
+Value:          gsk_…your Groq key…
+
+Variable name:  GEMINI_API_KEY
+Value:          AIza…your Gemini key…</pre>
+      <p>You only need to add the keys you actually obtained. Click <strong>Save and deploy</strong> after adding each one.</p>
+    </div></div>
+
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Copy your worker URL — it looks like <code>https://ai-proxy.your-name.workers.dev</code>. You can find it in the worker dashboard under <strong>Settings → Domains &amp; Routes</strong>.</p>
+    </div></div>
+  </div>
+
+  <hr>
+
+  <h2>Part C — Connect the Demo</h2>
+
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Open the demo page. At the top, the <strong>Groq / Gemini (Proxy)</strong> tier should already be selected.</p>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Paste your Cloudflare Worker URL into the <strong>Worker URL</strong> field.</p>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Select a model — Groq models (purple dots) use your Groq key; Gemini models (blue dots) use your Gemini key.</p>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body">
+      <p>Click <strong>New Game</strong>, then <strong>AI Step</strong>. The connection indicator will turn green on the first successful call.</p>
+    </div></div>
+  </div>
+
+  <div class="tip"><strong>If something goes wrong:</strong> open the browser console (F12 → Console tab). Error messages from the worker will appear there. The most common issue is a missing or incorrect worker URL.</div>
+
+  <hr>
+
+  <h2>Part D — Switching to Puter.js (Fallback)</h2>
+  <p>If the proxy is not working or you want to quickly demo with Claude, click the <strong>Puter.js (Fallback)</strong> button in the connection bar. This requires a Puter account (free signup at <a href="https://puter.com" target="_blank">puter.com</a>). Note that Puter's AI credits are non-renewable on the free tier.</p>
+
+  <hr>
+
+  <h2>Summary: What Goes Where</h2>
+  <pre>API keys (secret)    → Cloudflare Worker environment variables
+                         (never visible in browser source code)
+
+Worker URL (public)  → pasted into the demo page's Worker URL field
+                         (safe to share — it only accepts POST requests)
+
+Demo page            → calls your Worker URL
+                         Worker forwards to Groq or Gemini
+                         Response returns to demo</pre>
+
+</div>
+</body>
+</html>
