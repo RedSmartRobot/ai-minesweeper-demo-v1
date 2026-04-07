@@ -554,9 +554,9 @@ RULES:
 - You win by opening every non-mine square.
 
 BOARD STATE (sent to you each turn as three labelled lists):
-- REVEALED SQUARES — already open, grouped by value. Do NOT try to open these.
-- FLAGGED SQUARES — squares you have marked as mines. Do NOT open these.
-- UNREVEALED SQUARES — your only valid OPEN targets, each listed by coordinate.
+- REVEALED SQUARES — already open, grouped by value. Do NOT try to open or flag these.
+- FLAGGED SQUARES — squares you have marked as mines. Do NOT open or flag these.
+- UNREVEALED SQUARES — your only valid OPEN of FLAG targets, each listed by coordinate.
 
 Coordinates are column letter (A–H) followed by row number (1–8). Example: B3 = column B, row 3.
 When choosing a move, pick only from the UNREVEALED SQUARES list.
