@@ -553,18 +553,18 @@ RULES:
 - Place flags on squares you believe contain mines.
 - You win by opening every non-mine square.
 
-BOARD STATE (sent to you each turn):
-  ?  = unrevealed, unflagged
-  F  = flagged
-  .  = revealed with 0 mine-neighbours
-  1–8 = revealed with that many mine-neighbours
-  *  = mine (shown only on game over)
+BOARD STATE (sent to you each turn as three labelled lists):
+- REVEALED SQUARES — already open, grouped by value. Do NOT try to open these.
+- FLAGGED SQUARES — squares you have marked as mines. Do NOT open these.
+- UNREVEALED SQUARES — your only valid OPEN targets, each listed by coordinate.
+
+Coordinates are column letter (A–H) followed by row number (1–8). Example: B3 = column B, row 3.
+When choosing a move, pick only from the UNREVEALED SQUARES list.
 
 STRATEGY:
 - If a revealed number equals the count of adjacent unrevealed squares, they are all mines — flag them.
 - If a revealed number equals the count of adjacent flags, all remaining adjacent unrevealed squares are safe — open them.
 - When pure logic is exhausted, guess probabilistically. Edges and corners are slightly safer as first moves.
-- NEVER attempt to open a square that is already revealed (shown as a number or dot in the board state). Only open squares marked with ?.
 - Never open a flagged square.
 
 RESPONSE FORMAT — ACTIONS MUST COME FIRST:
@@ -730,6 +730,63 @@ function updateAscii() {
 }
 
 // ═══════════════════════════════════════
+//  EXPLICIT BOARD FORMAT (sent to AI)
+//  Lists every cell with its coordinate
+//  explicitly — avoids grid-counting errors
+//  in smaller models.
+// ═══════════════════════════════════════
+function boardToExplicit() {
+  const revealed = [], flagged = [], unrevealed = [];
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const cel = board[r][c];
+      const sq = COL_LABELS[c] + ROW_LABELS[r];
+      if (cel.revealed) {
+        const val = cel.mine ? '*' : cel.adjacent===0 ? '0' : String(cel.adjacent);
+        revealed.push(`${sq}=${val}`);
+      } else if (cel.flagged) {
+        flagged.push(sq);
+      } else {
+        unrevealed.push(sq);
+      }
+    }
+  }
+
+  let s = '';
+
+  if (revealed.length > 0) {
+    // Group revealed by value for compactness
+    const byVal = {};
+    revealed.forEach(entry => {
+      const [sq, val] = entry.split('=');
+      if (!byVal[val]) byVal[val] = [];
+      byVal[val].push(sq);
+    });
+    s += 'REVEALED SQUARES (do NOT open these — already open):\n';
+    for (const [val, squares] of Object.entries(byVal)) {
+      const label = val==='0' ? '0 (safe, no adjacent mines)'
+                  : val==='*' ? 'MINE'
+                  : `${val} (has ${val} adjacent mine${val==='1'?'':'s'})`;
+      s += `  ${label}: ${squares.join(' ')}\n`;
+    }
+  }
+
+  if (flagged.length > 0) {
+    s += `\nFLAGGED SQUARES (you marked these as mines — do NOT open):\n`;
+    s += `  ${flagged.join(' ')}\n`;
+  }
+
+  s += `\nUNREVEALED SQUARES (these are your only valid OPEN targets — marked ?):\n`;
+  if (unrevealed.length > 0) {
+    s += `  ${unrevealed.join(' ')}\n`;
+  } else {
+    s += `  (none — game should be over)\n`;
+  }
+
+  return s;
+}
+
+// ═══════════════════════════════════════
 //  GAME LOGIC
 // ═══════════════════════════════════════
 function newGame() {
@@ -883,8 +940,9 @@ async function aiStep() {
   document.getElementById('btn-ai-auto').disabled = true;
   setThinking(true);
 
-  const ascii = boardToAscii();
-  const userMsg = `Current board state:\n\`\`\`\n${ascii}\n\`\`\`\nMoves made: ${moveCount}. Flags placed: ${flagCount}.\nWhat is your next move?`;
+  const ascii = boardToAscii();      // for the human-readable UI panel
+  const explicit = boardToExplicit(); // for the AI — unambiguous labelled format
+  const userMsg = `Current board state:\n${explicit}\nMoves made: ${moveCount}. Flags placed: ${flagCount}.\nWhat is your next move?`;
 
   addLog('outgoing', userMsg);
   fullHistory.push({role:'AGENT → AI', content: userMsg});
@@ -972,9 +1030,8 @@ async function executeActions(actions) {
 }
 
 async function requestGameOverMemory(won) {
-  const ascii = boardToAscii();
   const outcome = won ? 'You WON this game.' : 'You LOST this game (hit a mine).';
-  const msg = `${outcome}\nFinal board state:\n\`\`\`\n${ascii}\n\`\`\`\nPlease write your MEMORY entry for this game now.`;
+  const msg = `${outcome}\nFinal board state:\n${boardToExplicit()}\nPlease write your MEMORY entry for this game now.`;
   conversationMessages.push({role:'user', content: msg});
   fullHistory.push({role:'AGENT → AI', content: msg});
   addLog('outgoing', msg);
